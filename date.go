@@ -6,21 +6,46 @@ import (
 )
 
 const (
-	secondsInDay = 86_400
+	hasMonotonic = 1 << 63
 	minDayNumber = 0
 	maxDayNumber = 3_652_058 // Maps to December 31, 9999.
+	nsecShift    = 30
+	secondsInDay = 86_400
+
+	wallToInternal int64 = (1884*365 + 1884/4 - 1884/100 + 1884/400) * secondsInDay
 )
 
 // Represents dates with values from January 1, 0001 Anno Domini (Common Era)
 // through December 31, 9999 A.D (C.E) in Gregorian calendar.
 type Date int64
 
-// dayNumber extracts ext field from time struct which contains number of seconds since January 1, 0001.
-func dayNumber(t time.Time) int64 {
-	return *(*int64)(unsafe.Add(unsafe.Pointer(&t), 8)) / secondsInDay
+// ext returns a ext value from time.Time
+func ext(t *time.Time) int64 {
+	return *(*int64)(unsafe.Add(unsafe.Pointer(t), 8))
 }
 
-// unsafeCreateTime creates a time.Time from date.Date by initializing time.Time with ext.
+// wall returns a wall value from time.Time
+func wall(t *time.Time) uint64 {
+	return *(*uint64)(unsafe.Pointer(t))
+}
+
+// sec returns the time's seconds since Jan 1 year 1.
+func sec(t *time.Time) int64 {
+	if wall(t)&hasMonotonic != 0 {
+		return wallToInternal + int64(wall(t)<<1>>(nsecShift+1))
+	}
+
+	return ext(t)
+}
+
+// dayNumber extracts ext field from time struct which contains
+// number of seconds since January 1, 0001.
+func dayNumber(t *time.Time) int64 {
+	return sec(t) / secondsInDay
+}
+
+// unsafeCreateTime creates a time.Time from date.Date by initializing
+// time.Time with ext.
 func unsafeCreateTime(d Date) time.Time {
 	t := time.Time{}
 	ext := (*int64)(unsafe.Add(unsafe.Pointer(&t), 8))
@@ -31,16 +56,17 @@ func unsafeCreateTime(d Date) time.Time {
 // Create creates a date containing only day number.
 func Create(year int, month time.Month, day int) Date {
 	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-	return Date(dayNumber(t))
+	return Date(dayNumber(&t))
 }
 
 // Today returns current date only.
 func Today() Date {
-	return Date(dayNumber(time.Now()))
+	n := time.Now()
+	return Date(dayNumber(&n))
 }
 
 // FromTime converts time.Time to Date.
-func FromTime(t time.Time) Date {
+func FromTime(t *time.Time) Date {
 	return Date(dayNumber(t))
 }
 
@@ -54,7 +80,7 @@ func Parse(layout, value string) (Date, error) {
 		return -1, err
 	}
 
-	return Date(dayNumber(t)), nil
+	return Date(dayNumber(&t)), nil
 }
 
 // Since returns number of days since d.
@@ -92,8 +118,8 @@ func (d Date) Day() int {
 	return unsafeCreateTime(d).Day()
 }
 
-// YearDay returns the day of the year specified by t, in the range [1,365] for non-leap years,
-// and [1,366] in leap years.
+// YearDay returns the day of the year specified by t, in the
+// range [1,365] for non-leap years, and [1,366] in leap years.
 func (d Date) YearDay() int {
 	return unsafeCreateTime(d).YearDay()
 }
@@ -108,7 +134,7 @@ func (d Date) YearDay() int {
 // December 1, the normalized form for November 31.
 func (d Date) AddDate(years int, months int, days int) Date {
 	t := unsafeCreateTime(d).AddDate(years, months, days)
-	return Date(dayNumber(t))
+	return Date(dayNumber(&t))
 }
 
 // Before reports whether the date instant d is before u.
