@@ -1,5 +1,7 @@
 # date.Date
 
+[![Tests](https://github.com/tomaspavlic/date/actions/workflows/go.yml/badge.svg)](https://github.com/tomaspavlic/date/actions/workflows/go.yml)
+
 Represents dates with values from January 1, 0001 Anno Domini (Common Era) through December 31, 9999 A.D (C.E) in Gregorian calendar. `date.Date` represents number of days since January 1, 001.
 
 ## Installation
