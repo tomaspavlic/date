@@ -32,6 +32,9 @@ numberOfDays := date.Since(someDate)
 fmt.Println("Number of days since 2000-01-01:", numberOfDays)
 ```
 
+## More
+Documentation can be found [on pkg.go.dev](https://pkg.go.dev/github.com/tomaspavlic/date).
+
 ## License
 
 This library is distributed under the MIT license found in the [LICENSE](./LICENSE) file.
