@@ -20,17 +20,17 @@ const (
 type Date int64
 
 // ext returns a ext value from time.Time
-func ext(t *time.Time) int64 {
-	return *(*int64)(unsafe.Add(unsafe.Pointer(t), 8))
+func ext(t time.Time) int64 {
+	return *(*int64)(unsafe.Add(unsafe.Pointer(&t), 8))
 }
 
 // wall returns a wall value from time.Time
-func wall(t *time.Time) uint64 {
-	return *(*uint64)(unsafe.Pointer(t))
+func wall(t time.Time) uint64 {
+	return *(*uint64)(unsafe.Pointer(&t))
 }
 
 // sec returns the time's seconds since Jan 1 year 1.
-func sec(t *time.Time) int64 {
+func sec(t time.Time) int64 {
 	if wall(t)&hasMonotonic != 0 {
 		return wallToInternal + int64(wall(t)<<1>>(nsecShift+1))
 	}
@@ -40,7 +40,7 @@ func sec(t *time.Time) int64 {
 
 // dayNumber extracts ext field from time struct which contains
 // number of seconds since January 1, 0001.
-func dayNumber(t *time.Time) int64 {
+func dayNumber(t time.Time) int64 {
 	return sec(t) / secondsInDay
 }
 
@@ -56,17 +56,17 @@ func unsafeCreateTime(d Date) time.Time {
 // Create creates a date containing only day number.
 func Create(year int, month time.Month, day int) Date {
 	t := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
-	return Date(dayNumber(&t))
+	return Date(dayNumber(t))
 }
 
 // Today returns current date only.
 func Today() Date {
 	n := time.Now()
-	return Date(dayNumber(&n))
+	return Date(dayNumber(n))
 }
 
 // FromTime converts time.Time to Date.
-func FromTime(t *time.Time) Date {
+func FromTime(t time.Time) Date {
 	return Date(dayNumber(t))
 }
 
@@ -80,7 +80,7 @@ func Parse(layout, value string) (Date, error) {
 		return -1, err
 	}
 
-	return Date(dayNumber(&t)), nil
+	return Date(dayNumber(t)), nil
 }
 
 // Since returns number of days since d.
@@ -134,7 +134,7 @@ func (d Date) YearDay() int {
 // December 1, the normalized form for November 31.
 func (d Date) AddDate(years int, months int, days int) Date {
 	t := unsafeCreateTime(d).AddDate(years, months, days)
-	return Date(dayNumber(&t))
+	return Date(dayNumber(t))
 }
 
 // Before reports whether the date instant d is before u.
